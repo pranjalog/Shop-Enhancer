@@ -1,2 +1,4 @@
 export * from "./generated/api";
-export * from "./generated/types";
+export type { HealthStatus } from "./generated/types/healthStatus";
+export type { ApiProduct } from "./generated/types/apiProduct";
+export type { CreateProductBody } from "./generated/types/createProductBody";

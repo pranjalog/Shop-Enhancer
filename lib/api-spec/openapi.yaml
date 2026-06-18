@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: storage
+    description: Object storage operations
+  - name: products
+    description: Product catalog operations
 paths:
   /healthz:
     get:
@@ -24,6 +28,92 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiProduct"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProduct"
+  /products/{id}:
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProduct"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
 components:
   schemas:
     HealthStatus:
@@ -33,4 +123,141 @@ components:
           type: string
       required:
         - status
-
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: number
+        contentType:
+          type: string
+      required:
+        - name
+        - size
+        - contentType
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+      required:
+        - uploadURL
+        - objectPath
+    ApiProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+          nullable: true
+        category:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          nullable: true
+        badge:
+          type: string
+          nullable: true
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        inStock:
+          type: boolean
+        isNew:
+          type: boolean
+        isBestseller:
+          type: boolean
+        colors:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - price
+        - category
+        - description
+        - rating
+        - reviewCount
+        - inStock
+        - isNew
+        - isBestseller
+        - colors
+        - features
+        - createdAt
+        - updatedAt
+    CreateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        price:
+          type: number
+        originalPrice:
+          type: number
+          nullable: true
+        category:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          nullable: true
+        badge:
+          type: string
+          nullable: true
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        inStock:
+          type: boolean
+        isNew:
+          type: boolean
+        isBestseller:
+          type: boolean
+        colors:
+          type: array
+          items:
+            type: string
+        features:
+          type: array
+          items:
+            type: string
+      required:
+        - name
+        - slug
+        - price
+        - category
+        - description
+        - rating
+        - reviewCount
+        - inStock
+        - isNew
+        - isBestseller
+        - colors
+        - features
