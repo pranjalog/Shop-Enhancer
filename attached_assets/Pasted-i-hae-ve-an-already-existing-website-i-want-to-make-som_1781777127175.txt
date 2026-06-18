@@ -1,0 +1,46 @@
+i hae=ve an already existing website i want to make some changes without changing the primary code or theme the chnages i want are 1. Add New Products to the Catalog
+
+Add Coffee Frother under a new "Kitchen & Home" category with full details: price, description, specs (materials, modes, battery), colors, tags, and image paths
+Add "CartivaPro 3-in-1 PocketVac" (mini 3-in-1 vacuum cleaner) under "Kitchen & Home" with full details: suction modes, portable design specs, charging type, what's in the box, and image paths
+Update the array in to include the new "Kitchen & Home" category
+Mark both new products as so they appear on the homepage featured section
+Update the CategoryShowcase component grid to include a "Kitchen & Home" tile alongside the existing Wellness, Self Care, Nutrition, and Bundles tiles
+Update the footer Shop links to include the new category
+2. Add Real Product Images
+
+Create a folder structure for all product images
+Add image slots for the existing massager, heating belt, heating pad, aromatherapy, etc.
+Add image slots for the new Coffee Frother and PocketVac products
+Update all image paths in to match the actual files placed in
+Add a fallback/placeholder image component for any product where a real photo has not yet been uploaded
+Improve the product detail page image gallery to support zoom/click-through on multiple images
+3. Build the Contact Us Page
+
+Create page () matching the black/white/rose theme
+Include the following contact details:
+Address: 149, New Anaj Mandi, Sirsa, Haryana, India — 125055
+Helpline: 9834023405
+Email: choudharynanshu@gmail.com
+Add a contact form (Name, Email, Subject, Message fields) with client-side validation
+Create a Supabase table to store every form submission (name, email, subject, message, submitted_at)
+Add a success/error state after form submit
+Include a Google Maps embed placeholder pointing to Sirsa, Haryana
+Add "Contact Us" link to the Navbar on desktop and mobile, and update the footer "Contact Us" link from to
+4. Build the User Account System
+
+Set up Supabase Auth (email/password sign-up and login)
+Create a ** table** in Supabase linked to to store: full name, phone, default shipping address, city, state, pincode
+Build and pages matching the site theme
+Build dashboard page showing: saved profile info, edit profile form, and order history
+Create a ** table** in Supabase to persist order records (items, total, shipping address, payment ID, status, created_at) — currently orders are lost on page refresh
+Add an Account icon to the navbar (shows login link when logged out, profile icon when logged in)
+Add a logout option in the navbar when signed in
+Pre-fill the checkout form with saved profile data when user is logged in for faster checkout
+After a successful Razorpay payment, save the order to Supabase under the user's account
+5. Final Polish & Integration
+
+Wire the Contact Us page link throughout the site (navbar, footer, help center references)
+Ensure the new "Kitchen & Home" category filters correctly on the Products page
+Update the Navbar array to include "Contact" and "Account"
+Add RLS (Row Level Security) policies on Supabase tables: users can only read/write their own profile and orders; contact submissions are insert-only publicly
+Test the full purchase flow: login → checkout pre-fill → Razorpay pay → order saved to database → visible in account dashboard

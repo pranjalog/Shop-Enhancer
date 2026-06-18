@@ -1,45 +1,106 @@
-# [Project name]
+# CartivaSho
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+India's #1 period relief e-commerce store — selling wellness devices, self-care products, nutrition, and kitchen/home accessories.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
+- `pnpm --filter @workspace/cartivashop run dev` — run the frontend (port 20066)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React 19 + Vite + React Router DOM + Framer Motion + Tailwind CSS
+- Backend: Express 5 (API server)
+- Auth & DB: Supabase (optional — set env vars to activate)
+- Payments: Razorpay (set env vars to activate)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/cartivashop/` — React+Vite frontend
+  - `src/data/products.ts` — all product definitions (source of truth)
+  - `src/types/index.ts` — TypeScript types
+  - `src/context/` — React contexts (Cart, Wishlist, Compare, Auth)
+  - `src/components/` — shared UI components
+  - `src/pages/` — one file per route
+  - `src/lib/supabase.ts` — Supabase client (conditional on env vars)
+- `artifacts/api-server/src/routes/payments.ts` — Razorpay order + verify routes
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Products live in a static `products.ts` file (no DB needed for catalog)
+- Supabase used only for Auth + contact form + orders — app works fully without it
+- Image fallback: `ImageWithFallback` component shows a shopping bag icon when product images 404
+- Razorpay payment flow: frontend calls `/api/payments/create-order`, opens Razorpay modal, redirects to `/order-confirmation` on success
+- React Router with `basename={import.meta.env.BASE_URL}` for path-based proxy routing
 
-## Product
+## Product Catalog
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+10 products across 6 categories:
+- **Wellness**: Period Cramp Massager, Heating Pad Belt, TENS Pain Relief Patch
+- **Self Care**: Aromatherapy Roll-On, Sleep & Recovery Mask
+- **Nutrition**: Comfort Tea Collection
+- **Bundles**: Complete Relief Bundle
+- **Fitness**: Yoga & Stretch Mat
+- **Kitchen & Home**: Electric Milk Frother, CartivaPro 3-in-1 PocketVac ← NEW
 
-## User preferences
+## Environment Variables Required
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+### Frontend (VITE_ prefix = exposed to browser)
+- `VITE_SUPABASE_URL` — Supabase project URL (enables auth)
+- `VITE_SUPABASE_ANON_KEY` — Supabase anon key (enables auth)
+- `VITE_RAZORPAY_KEY_ID` — Razorpay public key (optional, server returns it)
+
+### API Server
+- `RAZORPAY_KEY_ID` — Razorpay key ID
+- `RAZORPAY_KEY_SECRET` — Razorpay key secret
+
+## Supabase Tables Needed
+
+Run this in Supabase SQL editor when you add credentials:
+
+```sql
+-- User profiles
+create table profiles (
+  id uuid references auth.users primary key,
+  full_name text,
+  phone text,
+  default_address text,
+  city text,
+  state text,
+  pincode text
+);
+
+-- Contact form submissions
+create table contact_submissions (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  email text not null,
+  subject text,
+  message text not null,
+  created_at timestamptz default now()
+);
+
+-- Orders
+create table orders (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users,
+  items jsonb,
+  total numeric,
+  shipping_address text,
+  payment_id text,
+  status text default 'processing',
+  created_at timestamptz default now()
+);
+```
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Supabase client is only created when both env vars are set — app works in "demo mode" without them
+- The `@tailwindcss/typography` plugin import was removed from index.css to avoid errors (not needed)
+- Use `react-router-dom` `useSearchParams` for category filtering (not Next.js)
 
-## Pointers
+## User preferences
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+_Populate as you build._
