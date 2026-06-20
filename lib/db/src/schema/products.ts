@@ -27,6 +27,10 @@ export const insertProductSchema = createInsertSchema(productsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  price: z.coerce.string(),
+  originalPrice: z.coerce.string().optional(),
+  rating: z.coerce.string(),
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
