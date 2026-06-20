@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+const API = "https://workspaceapi-server-production-826f.up.railway.app";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Pencil, Trash2, Upload, X, Check, LogOut, Package,
