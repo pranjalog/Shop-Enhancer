@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 const router = Router();
 
-router.post("/api/payments/create-order", async (req, res) => {
+router.post("/payments/create-order", async (req, res) => {
   const { amount } = req.body as { amount?: number };
 
   if (!amount || typeof amount !== "number" || amount <= 0) {
@@ -53,7 +53,7 @@ router.post("/api/payments/create-order", async (req, res) => {
   }
 });
 
-router.post("/api/payments/verify", (req, res) => {
+router.post("/payments/verify", (req, res) => {
   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
     req.body as {
       razorpay_order_id: string;
