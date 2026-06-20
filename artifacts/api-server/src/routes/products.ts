@@ -12,6 +12,7 @@ function toJson(p: DbProduct) {
     price: parseFloat(p.price),
     originalPrice: p.originalPrice ? parseFloat(p.originalPrice) : null,
     rating: parseFloat(p.rating ?? "4.5"),
+    image: p.image ?? null,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
