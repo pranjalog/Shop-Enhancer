@@ -2,15 +2,17 @@ import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { SlidersHorizontal, X } from "lucide-react";
-import { products, categories } from "@/data/products";
+import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductsPage() {
+  const { products } = useProducts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [sortBy, setSortBy] = useState("featured");
   const [showFilters, setShowFilters] = useState(false);
 
   const activeCategory = searchParams.get("category") || "All";
+  const categories = ["All", ...Array.from(new Set(products.map((p) => p.category)))];
 
   const filtered = useMemo(() => {
     let list =
@@ -29,10 +31,10 @@ export default function ProductsPage() {
         return [...list].sort((a, b) => b.reviewCount - a.reviewCount);
       default:
         return [...list].sort(
-          (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)
+          (a, b) => (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0)
         );
     }
-  }, [activeCategory, sortBy]);
+  }, [activeCategory, sortBy, products]);
 
   const setCategory = (cat: string) => {
     if (cat === "All") {
@@ -63,7 +65,6 @@ export default function ProductsPage() {
 
         {/* Toolbar */}
         <div className="flex items-center justify-between gap-4 mb-8 pb-4 border-b border-gray-200">
-          {/* Categories scroll */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
             {categories.map((cat) => (
               <button
@@ -80,7 +81,6 @@ export default function ProductsPage() {
             ))}
           </div>
 
-          {/* Sort + Filter */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <select
               value={sortBy}
@@ -103,7 +103,6 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        {/* Active filter pill */}
         {activeCategory !== "All" && (
           <div className="flex items-center gap-2 mb-6">
             <span className="text-sm text-gray-500">Filtering by:</span>
@@ -117,7 +116,6 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {/* Grid */}
         {filtered.length === 0 ? (
           <div className="text-center py-24 text-gray-400">
             <p className="text-xl font-medium">No products found</p>
