@@ -3,3 +3,11 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://workspaceapi-server-production-826f.up.railway.app/api/:path*"
+    }
+  ]
+}
