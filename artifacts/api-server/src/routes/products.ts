@@ -70,4 +70,31 @@ router.put("/products/:id", async (req: Request, res: Response) => {
   try {
     const [product] = await db
       .update(productsTable)
-      .set({ ...parsed.data, updatedAt: new
+      .set({ ...parsed.data, updatedAt: new Date() })
+      .where(eq(productsTable.id, id))
+      .returning();
+    if (!product) {
+      res.status(404).json({ error: "Product not found" });
+      return;
+    }
+    res.json(toJson(product));
+  } catch {
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
+router.delete("/products/:id", async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid product ID" });
+    return;
+  }
+  try {
+    await db.delete(productsTable).where(eq(productsTable.id, id));
+    res.status(204).send();
+  } catch {
+    res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+export default router;
