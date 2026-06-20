@@ -69,7 +69,7 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("https://workspaceapi-server-production-826f.up.railway.app/api/payments/create-order", {
+      const res = await fetch("/api/payments/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: total }),
