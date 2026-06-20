@@ -11,7 +11,7 @@ import {
   Minus,
   Plus,
 } from "lucide-react";
-import { products } from "@/data/products";
+import { useProducts } from "@/hooks/useProducts";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { useCompare } from "@/context/CompareContext";
@@ -21,9 +21,9 @@ import ImageWithFallback from "@/components/ImageWithFallback";
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const product = products.find((p) => p.id === id);
+  const { products } = useProducts();
+  const product = products.find((p) => String(p.id) === id);
 
-  const [selectedImage, setSelectedImage] = useState(0);
   const [selectedColor, setSelectedColor] = useState<string | undefined>(
     product?.colors?.[0]
   );
@@ -61,13 +61,12 @@ export default function ProductDetailPage() {
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
-  const wishlisted = isInWishlist(product.id);
-  const compared = isInCompare(product.id);
+  const wishlisted = isInWishlist(String(product.id));
+  const compared = isInCompare(String(product.id));
 
   return (
     <main className="min-h-screen pt-24 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-8">
           <Link to="/" className="hover:text-black transition-colors">
             Home
@@ -81,7 +80,7 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20">
-          {/* Images */}
+          {/* Image */}
           <div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -90,35 +89,12 @@ export default function ProductDetailPage() {
               className="aspect-square bg-gray-100 rounded-2xl overflow-hidden"
             >
               <ImageWithFallback
-                src={product.images[selectedImage]}
+                src={product.image ?? ""}
                 alt={product.name}
                 className="w-full h-full"
                 fallbackSize={80}
               />
             </motion.div>
-
-            {product.images.length > 1 && (
-              <div className="flex gap-3 mt-4">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedImage(i)}
-                    className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedImage === i
-                        ? "border-black"
-                        : "border-transparent"
-                    }`}
-                  >
-                    <ImageWithFallback
-                      src={img}
-                      alt={`${product.name} ${i + 1}`}
-                      className="w-full h-full"
-                      fallbackSize={20}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Info */}
@@ -134,7 +110,6 @@ export default function ProductDetailPage() {
               {product.name}
             </h1>
 
-            {/* Rating */}
             <div className="flex items-center gap-2 mt-3">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
@@ -154,7 +129,6 @@ export default function ProductDetailPage() {
               </span>
             </div>
 
-            {/* Price */}
             <div className="flex items-baseline gap-3 mt-6">
               <span className="text-4xl font-black">
                 ₹{product.price.toLocaleString("en-IN")}
@@ -180,7 +154,6 @@ export default function ProductDetailPage() {
               {product.description}
             </p>
 
-            {/* Color selection */}
             {product.colors && product.colors.length > 0 && (
               <div className="mt-6">
                 <p className="text-sm font-semibold uppercase tracking-wider mb-3">
@@ -207,7 +180,6 @@ export default function ProductDetailPage() {
               </div>
             )}
 
-            {/* Quantity */}
             <div className="mt-6">
               <p className="text-sm font-semibold uppercase tracking-wider mb-3">
                 Quantity
@@ -233,7 +205,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3 mt-8">
               <motion.button
                 onClick={handleAddToCart}
@@ -282,31 +253,24 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {/* Specs */}
-            {product.specs && (
+            {product.features && product.features.length > 0 && (
               <div className="mt-10 border-t border-gray-200 pt-8">
                 <h3 className="text-sm font-bold uppercase tracking-widest mb-4">
-                  Specifications
+                  Features
                 </h3>
-                <dl className="space-y-3">
-                  {Object.entries(product.specs).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex gap-4 text-sm"
-                    >
-                      <dt className="w-36 flex-shrink-0 text-gray-500">
-                        {key}
-                      </dt>
-                      <dd className="font-medium">{value}</dd>
-                    </div>
+                <ul className="space-y-2">
+                  {product.features.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <Check size={14} className="text-green-600 flex-shrink-0" />
+                      {f}
+                    </li>
                   ))}
-                </dl>
+                </ul>
               </div>
             )}
           </motion.div>
         </div>
 
-        {/* Related Products */}
         {related.length > 0 && (
           <div className="mt-24">
             <h2 className="text-2xl font-black uppercase tracking-tight mb-8">
