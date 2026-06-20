@@ -10,7 +10,7 @@ export const productsTable = pgTable("products", {
   originalPrice: numeric("original_price", { precision: 10, scale: 2 }),
   category: text("category").notNull(),
   description: text("description").notNull(),
-  images: text("images").array().notNull().default([]),
+  image: text("image"),
   badge: text("badge"),
   rating: numeric("rating", { precision: 3, scale: 1 }).notNull().default("4.5"),
   reviewCount: integer("review_count").notNull().default(0),
@@ -27,10 +27,6 @@ export const insertProductSchema = createInsertSchema(productsTable).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-}).extend({
-  price: z.coerce.string(),
-  originalPrice: z.coerce.string().optional(),
-  rating: z.coerce.string(),
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
