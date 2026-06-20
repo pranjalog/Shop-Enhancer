@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import { products } from "@/data/products";
+import { useProducts } from "@/hooks/useProducts";
 import ProductCard from "./ProductCard";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
 export default function FeaturedProducts() {
-  const featured = products.filter((p) => p.featured);
+  const { products } = useProducts();
+  const featured = products.filter((p) => p.isBestseller).slice(0, 4);
 
   return (
     <section className="py-24 bg-white">
