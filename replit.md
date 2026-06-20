@@ -1,4 +1,4 @@
-# CartivaSho
+
 
 India's #1 period relief e-commerce store — selling wellness devices, self-care products, nutrition, and kitchen/home accessories.
 
