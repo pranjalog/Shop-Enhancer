@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { setBaseUrl } from "@/../../lib/api-client-react/src/custom-fetch";
+setBaseUrl("https://workspaceapi-server-production-826f.up.railway.app");
 import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
