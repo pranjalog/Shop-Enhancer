@@ -10,7 +10,7 @@ export const productsTable = pgTable("products", {
   originalPrice: numeric("original_price", { precision: 10, scale: 2 }),
   category: text("category").notNull(),
   description: text("description").notNull(),
-  image: text("image"),
+  images: text("images").array().notNull().default([]),
   badge: text("badge"),
   rating: numeric("rating", { precision: 3, scale: 1 }).notNull().default("4.5"),
   reviewCount: integer("review_count").notNull().default(0),

@@ -10,7 +10,7 @@ export type ApiProduct = {
   originalPrice: number | null;
   category: string;
   description: string;
-  image: string | null;
+  images: string[];
   badge: string | null;
   rating: number;
   reviewCount: number;
@@ -33,7 +33,7 @@ export function apiProductToProduct(p: ApiProduct): Product {
     category: p.category,
     description: p.description,
     shortDescription: p.description.slice(0, 120) + "...",
-    images: p.image ? [p.image] : [],
+    images: p.images ?? [],
     badge: p.badge ?? undefined,
     rating: p.rating,
     reviewCount: p.reviewCount,

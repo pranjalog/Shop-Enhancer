@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Pencil, Trash2, Upload, X, Check, LogOut, Package,
-  ChevronDown, ChevronUp, ImageIcon, Loader2, Shield,
+  ImageIcon, Loader2, Shield,
 } from "lucide-react";
 import type { ApiProduct } from "@/hooks/useProducts";
 
@@ -17,7 +17,7 @@ type FormData = {
   originalPrice: string;
   category: string;
   description: string;
-  image: string;
+  images: [string, string, string];
   badge: string;
   rating: string;
   reviewCount: string;
@@ -35,7 +35,7 @@ const emptyForm: FormData = {
   originalPrice: "",
   category: "Wellness",
   description: "",
-  image: "",
+  images: ["", "", ""],
   badge: "",
   rating: "4.5",
   reviewCount: "0",
@@ -58,7 +58,7 @@ function formToPayload(f: FormData) {
     originalPrice: f.originalPrice ? parseFloat(f.originalPrice) : null,
     category: f.category,
     description: f.description,
-    image: f.image || null,
+    images: f.images.filter(Boolean),
     badge: f.badge || null,
     rating: parseFloat(f.rating) || 4.5,
     reviewCount: parseInt(f.reviewCount) || 0,
@@ -71,6 +71,7 @@ function formToPayload(f: FormData) {
 }
 
 function productToForm(p: ApiProduct): FormData {
+  const imgs = p.images ?? [];
   return {
     name: p.name,
     slug: p.slug,
@@ -78,7 +79,7 @@ function productToForm(p: ApiProduct): FormData {
     originalPrice: p.originalPrice ? String(p.originalPrice) : "",
     category: p.category,
     description: p.description,
-    image: p.image ?? "",
+    images: [imgs[0] ?? "", imgs[1] ?? "", imgs[2] ?? ""],
     badge: p.badge ?? "",
     rating: String(p.rating),
     reviewCount: String(p.reviewCount),
@@ -88,6 +89,121 @@ function productToForm(p: ApiProduct): FormData {
     colors: p.colors.join(", "),
     features: p.features.join("\n"),
   };
+}
+
+function ImageSlot({
+  index,
+  value,
+  onChange,
+  label,
+}: {
+  index: number;
+  value: string;
+  onChange: (url: string) => void;
+  label: string;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const urlRes = await fetch("/api/storage/uploads/request-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
+      });
+      const { uploadURL, objectPath } = await urlRes.json();
+      await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      onChange(`/api/storage${objectPath}`);
+      setFeedback("Uploaded!");
+      setTimeout(() => setFeedback(null), 2000);
+    } catch {
+      setFeedback("Failed");
+      setTimeout(() => setFeedback(null), 2000);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500">
+        {label}
+      </label>
+      <div className="relative">
+        {value ? (
+          <div className="relative group">
+            <img
+              src={value}
+              alt={`Photo ${index + 1}`}
+              className="w-full h-32 object-cover rounded border border-gray-200"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center gap-2">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="p-1.5 bg-white rounded text-xs font-medium flex items-center gap-1"
+              >
+                <Upload size={10} /> Replace
+              </button>
+              <button
+                onClick={() => onChange("")}
+                className="p-1.5 bg-white rounded text-red-500"
+              >
+                <X size={10} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="w-full h-32 border-2 border-dashed border-gray-300 hover:border-black transition-colors rounded flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-black"
+          >
+            {uploading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <>
+                <ImageIcon size={18} />
+                <span className="text-xs font-medium">Upload photo</span>
+              </>
+            )}
+          </button>
+        )}
+        {feedback && (
+          <span className={`absolute top-1 right-1 text-xs px-1.5 py-0.5 rounded font-medium ${
+            feedback === "Uploaded!" ? "bg-green-500 text-white" : "bg-red-500 text-white"
+          }`}>
+            {feedback}
+          </span>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFile}
+      />
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Or paste image URL"
+        className="w-full border border-gray-200 px-2 py-1.5 text-xs focus:outline-none focus:border-black rounded"
+      />
+    </div>
+  );
 }
 
 export default function AdminPage() {
@@ -104,13 +220,11 @@ export default function AdminPage() {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
   const [newCategory, setNewCategory] = useState("");
   const [customCategories, setCustomCategories] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("admin_categories") ?? "[]"); } catch { return []; }
   });
-  const fileRef = useRef<HTMLInputElement>(null);
   const adminPw = useRef("");
 
   const allCategories = [...CATEGORIES, ...customCategories];
@@ -202,6 +316,14 @@ export default function AdminPage() {
     setForm(emptyForm);
   }
 
+  function setImageAt(i: 0 | 1 | 2, url: string) {
+    setForm((f) => {
+      const next: [string, string, string] = [...f.images] as [string, string, string];
+      next[i] = url;
+      return { ...f, images: next };
+    });
+  }
+
   async function handleSave() {
     if (!form.name || !form.price || !form.category) {
       flash("err", "Name, price and category are required.");
@@ -243,33 +365,6 @@ export default function AdminPage() {
     }
   }
 
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingImage(true);
-    try {
-      const urlRes = await fetch("/api/storage/uploads/request-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type }),
-      });
-      const { uploadURL, objectPath } = await urlRes.json();
-      await fetch(uploadURL, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      const serveUrl = `/api/storage${objectPath}`;
-      setForm((f) => ({ ...f, image: serveUrl }));
-      flash("ok", "Image uploaded!");
-    } catch {
-      flash("err", "Image upload failed.");
-    } finally {
-      setUploadingImage(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
   function addCategory() {
     const cat = newCategory.trim();
     if (!cat || allCategories.includes(cat)) return;
@@ -301,7 +396,7 @@ export default function AdminPage() {
               <p className="text-xs text-gray-500">Cartiva Store Management</p>
             </div>
           </div>
-          <div className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); login(); }} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
                 Admin Password
@@ -310,20 +405,20 @@ export default function AdminPage() {
                 type="password"
                 value={pwInput}
                 onChange={(e) => setPwInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && login()}
                 placeholder="Enter password"
+                autoComplete="current-password"
                 className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black"
               />
             </div>
             {pwError && <p className="text-xs text-red-500">{pwError}</p>}
             <button
-              onClick={login}
+              type="submit"
               disabled={pwLoading || !pwInput}
               className="w-full py-3 bg-black text-white text-sm font-semibold uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 transition-colors"
             >
               {pwLoading ? "Verifying..." : "Sign In"}
             </button>
-          </div>
+          </form>
           <p className="mt-4 text-xs text-gray-400 text-center">
             Default password: <span className="font-mono">cartiva2024</span>
           </p>
@@ -341,9 +436,12 @@ export default function AdminPage() {
             <Package size={20} />
             <span className="font-black uppercase tracking-tight text-lg">Cartiva Admin</span>
           </div>
-          <button onClick={logout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black">
-            <LogOut size={16} /> Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <a href="/" className="text-sm text-gray-500 hover:text-black transition-colors">← Back to Store</a>
+            <button onClick={logout} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black">
+              <LogOut size={16} /> Logout
+            </button>
+          </div>
         </div>
       </div>
 
@@ -371,7 +469,7 @@ export default function AdminPage() {
             { label: "Total Products", value: products.length },
             { label: "In Stock", value: products.filter((p) => p.inStock).length },
             { label: "Categories", value: [...new Set(products.map((p) => p.category))].length },
-            { label: "Bestsellers", value: products.filter((p) => p.isBestseller).length },
+            { label: "With Photos", value: products.filter((p) => p.images?.length > 0).length },
           ].map((s) => (
             <div key={s.label} className="bg-white border border-gray-200 p-4">
               <p className="text-2xl font-black">{s.value}</p>
@@ -392,7 +490,7 @@ export default function AdminPage() {
                   className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-sm font-medium hover:border-black transition-colors"
                 >
                   {seeding ? <Loader2 size={14} className="animate-spin" /> : <Package size={14} />}
-                  {seeding ? "Seeding..." : "Import Default Products"}
+                  {seeding ? "Importing..." : "Import Default Products"}
                 </button>
               )}
               <button
@@ -413,76 +511,84 @@ export default function AdminPage() {
             <div className="p-12 text-center text-gray-400">
               <Package size={36} className="mx-auto mb-3 opacity-30" />
               <p className="text-sm font-medium">No products yet</p>
-              <p className="text-xs mt-1">Click "Import Default Products" to load the defaults, or add manually.</p>
+              <p className="text-xs mt-1">Click "Import Default Products" to load the 10 defaults, or add manually.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    {["ID", "Image", "Name", "Category", "Price", "Stock", "Flags", "Actions"].map((h) => (
+                    {["ID", "Photos", "Name", "Category", "Price", "Stock", "Flags", "Actions"].map((h) => (
                       <th key={h} className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500 px-4 py-3">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {products.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-xs text-gray-400">#{p.id}</td>
-                      <td className="px-4 py-3">
-                        {p.image ? (
-                          <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded" />
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center">
-                            <ImageIcon size={14} className="text-gray-400" />
+                  {products.map((p) => {
+                    const imgs = p.images ?? [];
+                    return (
+                      <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-xs text-gray-400">#{p.id}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1">
+                            {[0, 1, 2].map((i) => (
+                              <div key={i} className="w-9 h-9 bg-gray-100 rounded overflow-hidden flex items-center justify-center border border-gray-200">
+                                {imgs[i] ? (
+                                  <img src={imgs[i]} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <ImageIcon size={10} className="text-gray-300" />
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-medium max-w-[180px]">
-                        <span className="line-clamp-1">{p.name}</span>
-                        {p.badge && (
-                          <span className="inline-block mt-0.5 text-xs bg-black text-white px-1.5 py-0.5 rounded">
-                            {p.badge}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{p.category}</td>
-                      <td className="px-4 py-3 font-bold">
-                        ₹{p.price.toLocaleString("en-IN")}
-                        {p.originalPrice && (
-                          <span className="block text-xs text-gray-400 line-through font-normal">
-                            ₹{p.originalPrice.toLocaleString("en-IN")}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-block w-2 h-2 rounded-full ${p.inStock ? "bg-green-500" : "bg-red-400"}`} />
-                        <span className="ml-1.5 text-xs">{p.inStock ? "In Stock" : "Out"}</span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 space-y-0.5">
-                        {p.isBestseller && <div>⭐ Bestseller</div>}
-                        {p.isNew && <div>🆕 New</div>}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-                            title="Edit"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(p.id)}
-                            className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          <p className="text-xs text-gray-400 mt-0.5">{imgs.length}/3 photos</p>
+                        </td>
+                        <td className="px-4 py-3 font-medium max-w-[160px]">
+                          <span className="line-clamp-1">{p.name}</span>
+                          {p.badge && (
+                            <span className="inline-block mt-0.5 text-xs bg-black text-white px-1.5 py-0.5 rounded">
+                              {p.badge}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{p.category}</td>
+                        <td className="px-4 py-3 font-bold">
+                          ₹{p.price.toLocaleString("en-IN")}
+                          {p.originalPrice && (
+                            <span className="block text-xs text-gray-400 line-through font-normal">
+                              ₹{p.originalPrice.toLocaleString("en-IN")}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block w-2 h-2 rounded-full ${p.inStock ? "bg-green-500" : "bg-red-400"}`} />
+                          <span className="ml-1.5 text-xs">{p.inStock ? "In Stock" : "Out"}</span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500 space-y-0.5">
+                          {p.isBestseller && <div>⭐ Bestseller</div>}
+                          {p.isNew && <div>🆕 New</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openEdit(p)}
+                              className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(p.id)}
+                              className="p-1.5 hover:bg-red-50 text-red-500 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -560,44 +666,26 @@ export default function AdminPage() {
                 </button>
               </div>
 
-              <div className="p-6 space-y-5">
-                {/* Image */}
+              <div className="p-6 space-y-6">
+                {/* 3 Image Slots */}
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">
-                    Product Image
-                  </label>
-                  <div className="flex gap-3 items-start">
-                    <div className="w-20 h-20 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                      {form.image ? (
-                        <img src={form.image} alt="preview" className="w-full h-full object-cover rounded" />
-                      ) : (
-                        <ImageIcon size={20} className="text-gray-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageUpload}
+                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">
+                    Product Photos (up to 3)
+                  </p>
+                  <div className="grid grid-cols-3 gap-4">
+                    {([0, 1, 2] as const).map((i) => (
+                      <ImageSlot
+                        key={i}
+                        index={i}
+                        value={form.images[i]}
+                        onChange={(url) => setImageAt(i, url)}
+                        label={i === 0 ? "Main Photo *" : `Photo ${i + 1}`}
                       />
-                      <button
-                        onClick={() => fileRef.current?.click()}
-                        disabled={uploadingImage}
-                        className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-xs font-medium hover:border-black transition-colors"
-                      >
-                        {uploadingImage ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
-                        {uploadingImage ? "Uploading..." : "Upload Image"}
-                      </button>
-                      <input
-                        value={form.image}
-                        onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-                        placeholder="Or paste image URL"
-                        className="w-full border border-gray-300 px-3 py-2 text-xs focus:outline-none focus:border-black"
-                      />
-                    </div>
+                    ))}
                   </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Photo 1 is shown in product cards. All 3 appear in the product gallery.
+                  </p>
                 </div>
 
                 {/* Name + Slug */}
@@ -652,7 +740,7 @@ export default function AdminPage() {
                       type="number"
                       value={form.originalPrice}
                       onChange={(e) => setForm((f) => ({ ...f, originalPrice: e.target.value }))}
-                      placeholder="1499"
+                      placeholder="1499 (for discount)"
                       className="w-full border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-black"
                     />
                   </div>
