@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingBag } from "lucide-react";
 
 interface ImageWithFallbackProps {
@@ -15,6 +15,11 @@ export default function ImageWithFallback({
   fallbackSize = 48,
 }: ImageWithFallbackProps) {
   const [errored, setErrored] = useState(false);
+
+  // Reset error state whenever src changes
+  useEffect(() => {
+    setErrored(false);
+  }, [src]);
 
   if (!src || errored) {
     return (
