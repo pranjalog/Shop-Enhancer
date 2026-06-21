@@ -113,6 +113,20 @@ router.get("/shopify/callback", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/shopify/debug — temporary debug info (remove after fixing)
+router.get("/shopify/debug", async (req: Request, res: Response) => {
+  try {
+    const allRows = await db.execute(sql`SELECT shop, scope, updated_at FROM shopify_tokens`);
+    res.json({
+      SHOP_DOMAIN_env_value: SHOP_DOMAIN,
+      SHOP_DOMAIN_char_count: SHOP_DOMAIN.length,
+      rows_in_database: allRows,
+    });
+  } catch (err) {
+    res.json({ error: String(err) });
+  }
+});
+
 // GET /api/shopify/status — check connection status
 router.get("/shopify/status", async (req: Request, res: Response) => {
   const shop = SHOP_DOMAIN;
