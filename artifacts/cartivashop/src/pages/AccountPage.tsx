@@ -3,10 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { User, Package, Settings, LogOut, Save } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Order } from "@/types";
+import { UserProfile } from "@/types";
 
 type Tab = "profile" | "orders" | "settings";
+
+interface Order {
+  id: number;
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  total: string;
+  status: string;
+  paymentMethod: string;
+  createdAt: string;
+  items: any[];
+}
 
 export default function AccountPage() {
   const { user, profile, signOut, updateProfile, configured } = useAuth();
@@ -40,18 +51,16 @@ export default function AccountPage() {
   }, [profile]);
 
   useEffect(() => {
-    if (!user) return;
-    if (activeTab === "orders" && isSupabaseConfigured()) {
+    if (!user || !user.email) return;
+    if (activeTab === "orders") {
       setOrdersLoading(true);
-      supabase
-        .from("orders")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => {
-          setOrders((data as Order[]) || []);
+      fetch(`/api/orders/by-email/${encodeURIComponent(user.email)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setOrders(Array.isArray(data) ? data : []);
           setOrdersLoading(false);
-        });
+        })
+        .catch(() => setOrdersLoading(false));
     }
   }, [activeTab, user]);
 
@@ -62,13 +71,9 @@ export default function AccountPage() {
           <p className="text-xl font-bold mb-4">Account Unavailable</p>
           <p className="text-gray-500 text-sm">
             Supabase authentication is not configured. Add{" "}
-            <code className="text-xs bg-gray-100 px-1 rounded">
-              VITE_SUPABASE_URL
-            </code>{" "}
+            <code className="text-xs bg-gray-100 px-1 rounded">VITE_SUPABASE_URL</code>{" "}
             and{" "}
-            <code className="text-xs bg-gray-100 px-1 rounded">
-              VITE_SUPABASE_ANON_KEY
-            </code>{" "}
+            <code className="text-xs bg-gray-100 px-1 rounded">VITE_SUPABASE_ANON_KEY</code>{" "}
             to enable user accounts.
           </p>
           <Link
@@ -101,7 +106,7 @@ export default function AccountPage() {
   const handleSaveProfile = async () => {
     setSaving(true);
     setProfileError(null);
-    const { error } = await updateProfile(profileForm);
+    const { error } = await updateProfile(profileForm as Partial<UserProfile>);
     if (error) {
       setProfileError(error);
     } else {
@@ -177,7 +182,6 @@ export default function AccountPage() {
                 <h2 className="text-xl font-bold uppercase tracking-wider mb-6">
                   My Profile
                 </h2>
-
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">
@@ -185,12 +189,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.full_name}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          full_name: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, full_name: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -200,12 +199,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.phone}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          phone: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -215,12 +209,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.default_address}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          default_address: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, default_address: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -230,12 +219,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.city}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          city: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, city: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -245,12 +229,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.state}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          state: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, state: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -260,12 +239,7 @@ export default function AccountPage() {
                     </label>
                     <input
                       value={profileForm.pincode}
-                      onChange={(e) =>
-                        setProfileForm((f) => ({
-                          ...f,
-                          pincode: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setProfileForm((f) => ({ ...f, pincode: e.target.value }))}
                       className="w-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
@@ -316,44 +290,49 @@ export default function AccountPage() {
                 ) : (
                   <div className="space-y-4">
                     {orders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="border border-gray-200 rounded-lg p-5"
-                      >
+                      <div key={order.id} className="border border-gray-200 rounded-lg p-5">
                         <div className="flex items-start justify-between">
                           <div>
                             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                               Order
                             </p>
-                            <p className="font-semibold">#{order.id.slice(-8).toUpperCase()}</p>
+                            <p className="font-semibold">#{order.orderNumber || String(order.id)}</p>
                           </div>
-                          <span
-                            className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${
-                              order.status === "delivered"
-                                ? "bg-green-100 text-green-700"
-                                : order.status === "shipped"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
+                          <span className={`px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${
+                            order.status === "delivered"
+                              ? "bg-green-100 text-green-700"
+                              : order.status === "paid"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}>
                             {order.status}
                           </span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-sm">
+                        <div className="mt-3 text-sm text-gray-500">
+                          {order.paymentMethod === "cod" ? "Cash on Delivery" : "Paid Online"}
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-sm">
                           <span className="text-gray-500">
-                            {new Date(order.created_at).toLocaleDateString(
-                              "en-IN",
-                              {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              }
-                            )}
+                            {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
                           </span>
                           <span className="font-bold">
-                            ₹{order.total.toLocaleString("en-IN")}
+                            ₹{parseFloat(order.total).toLocaleString("en-IN")}
                           </span>
                         </div>
+                        {Array.isArray(order.items) && order.items.length > 0 && (
+                          <div className="mt-3 border-t border-gray-100 pt-3 space-y-1">
+                            {order.items.map((item: any, i: number) => (
+                              <div key={i} className="flex justify-between text-xs text-gray-500">
+                                <span>{item.name} × {item.quantity}</span>
+                                <span>₹{(item.price * item.quantity).toLocaleString("en-IN")}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
