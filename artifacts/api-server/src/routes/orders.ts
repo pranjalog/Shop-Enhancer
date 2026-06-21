@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { ordersTable, insertOrderSchema } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { pushOrderToShopify } from "./shopify";
 
 const router: IRouter = Router();
 
@@ -18,6 +19,21 @@ router.post("/orders", async (req: Request, res: Response) => {
   try {
     const [order] = await db.insert(ordersTable).values(parsed.data).returning();
     res.status(201).json(order);
+
+    // Push to Shopify in the background; don't block or fail the checkout if this errors
+    pushOrderToShopify({
+      orderNumber: order.orderNumber,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      customerPhone: order.customerPhone,
+      address: order.address,
+      city: order.city,
+      state: order.state,
+      pincode: order.pincode,
+      items: order.items as any,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+    }).catch((err) => console.log("[shopify] order push threw:", err));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to save order" });
