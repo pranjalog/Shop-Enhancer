@@ -21,6 +21,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,6 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }, [configured, user, fetchProfile]);
 
+  const resendConfirmation = useCallback(async (email: string) => {
+    if (!configured) return { error: "Supabase not configured" };
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    if (error) return { error: error.message };
+    return { error: null };
+  }, [configured]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -130,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         updateProfile,
         refreshProfile,
+        resendConfirmation,
       }}
     >
       {children}
