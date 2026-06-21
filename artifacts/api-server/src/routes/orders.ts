@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-router.post("/api/orders", async (req: Request, res: Response) => {
+router.post("/orders", async (req: Request, res: Response) => {
   const body = {
     ...req.body,
     total: req.body.total?.toString(),
@@ -24,7 +24,7 @@ router.post("/api/orders", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/api/orders", async (req: Request, res: Response) => {
+router.get("/orders", async (req: Request, res: Response) => {
   try {
     const orders = await db.select().from(ordersTable).orderBy(ordersTable.createdAt);
     res.json(orders);
@@ -33,7 +33,7 @@ router.get("/api/orders", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/api/orders/by-email/:email", async (req: Request, res: Response) => {
+router.get("/orders/by-email/:email", async (req: Request, res: Response) => {
   try {
     const orders = await db
       .select()
