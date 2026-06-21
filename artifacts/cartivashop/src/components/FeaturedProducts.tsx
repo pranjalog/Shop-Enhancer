@@ -6,7 +6,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function FeaturedProducts() {
   const { products } = useProducts();
-  const featured = products.filter((p) => p.isBestseller).slice(0, 4);
+  const featured = products.filter((p) => p.tags.includes("bestseller")).slice(0, 4);
 
   return (
     <section className="py-24 bg-white">
