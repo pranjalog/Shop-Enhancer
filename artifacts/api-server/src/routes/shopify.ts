@@ -29,15 +29,12 @@ function verifyHmac(query: Record<string, string>): boolean {
 
 async function getStoredToken(shop: string): Promise<string | null> {
   try {
-    console.log("[shopify] looking up token for shop:", JSON.stringify(shop));
-    const rows = await db.execute(
-      sql`SELECT access_token, shop FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
+    const result: any = await db.execute(
+      sql`SELECT access_token FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
     );
-    console.log("[shopify] query returned rows:", JSON.stringify(rows));
-    const first = (rows as any[])[0];
+    const first = result?.rows?.[0];
     return first?.access_token ?? null;
-  } catch (err) {
-    console.log("[shopify] getStoredToken error:", err);
+  } catch {
     return null;
   }
 }
@@ -110,27 +107,6 @@ router.get("/shopify/callback", async (req: Request, res: Response) => {
     res.redirect("https://cartiva.click/admin?shopify=connected");
   } catch (err) {
     res.status(500).json({ error: "OAuth callback error" });
-  }
-});
-
-// GET /api/shopify/debug — temporary debug info (remove after fixing)
-router.get("/shopify/debug", async (req: Request, res: Response) => {
-  try {
-    const allRows = await db.execute(sql`SELECT shop, scope, updated_at FROM shopify_tokens`);
-    const filteredRows = await db.execute(
-      sql`SELECT shop, access_token FROM shopify_tokens WHERE shop = ${SHOP_DOMAIN} LIMIT 1`
-    );
-    const filtered = (filteredRows as any[])[0];
-    res.json({
-      SHOP_DOMAIN_env_value: SHOP_DOMAIN,
-      SHOP_DOMAIN_char_count: SHOP_DOMAIN.length,
-      rows_in_database: allRows,
-      filtered_query_result: filteredRows,
-      filtered_query_found_a_row: !!filtered,
-      filtered_query_has_token: !!filtered?.access_token,
-    });
-  } catch (err) {
-    res.json({ error: String(err) });
   }
 });
 
