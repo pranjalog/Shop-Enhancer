@@ -50,6 +50,89 @@ async function storeToken(shop: string, accessToken: string, scope: string) {
   `);
 }
 
+type CartivaOrder = {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  address: string;
+  city: string;
+  state?: string | null;
+  pincode: string;
+  items: Array<{ id?: string; name: string; price: string | number; quantity: number; color?: string }>;
+  total: string | number;
+  paymentMethod: string;
+};
+
+// Creates a matching order inside Shopify when a customer checks out on cartiva.click.
+// Uses custom (title-based) line items so it works even if products aren't synced/matched to Shopify variants.
+export async function pushOrderToShopify(order: CartivaOrder): Promise<boolean> {
+  const shop = SHOP_DOMAIN;
+  const token = await getStoredToken(shop);
+  if (!token) {
+    console.log("[shopify] skipping order push, not connected");
+    return false;
+  }
+
+  const [firstName, ...rest] = order.customerName.trim().split(/\s+/);
+  const lastName = rest.join(" ") || "-";
+
+  const body = {
+    order: {
+      line_items: order.items.map((i) => ({
+        title: i.name,
+        price: String(i.price),
+        quantity: i.quantity,
+        ...(i.color ? { properties: [{ name: "Color", value: i.color }] } : {}),
+      })),
+      email: order.customerEmail,
+      phone: order.customerPhone,
+      customer: {
+        first_name: firstName || order.customerName,
+        last_name: lastName,
+        email: order.customerEmail,
+        phone: order.customerPhone,
+      },
+      shipping_address: {
+        first_name: firstName || order.customerName,
+        last_name: lastName,
+        address1: order.address,
+        city: order.city,
+        province: order.state || undefined,
+        zip: order.pincode,
+        country: "India",
+        phone: order.customerPhone,
+      },
+      financial_status: order.paymentMethod === "cod" ? "pending" : "paid",
+      note: `Cartiva order ${order.orderNumber} (${order.paymentMethod})`,
+      tags: "cartiva-website",
+      send_receipt: false,
+      send_fulfillment_receipt: false,
+    },
+  };
+
+  try {
+    const r = await fetch(`https://${shop}/admin/api/2024-10/orders.json`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": token,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      console.log("[shopify] order push failed:", r.status, txt);
+      return false;
+    }
+    console.log("[shopify] order pushed successfully:", order.orderNumber);
+    return true;
+  } catch (err) {
+    console.log("[shopify] order push error:", err);
+    return false;
+  }
+}
+
 // GET /api/shopify/install — start OAuth
 router.get("/shopify/install", (req: Request, res: Response) => {
   const shop = (req.query.shop as string) || SHOP_DOMAIN;
