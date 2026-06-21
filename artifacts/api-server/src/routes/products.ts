@@ -12,14 +12,27 @@ function toJson(p: DbProduct) {
     price: parseFloat(p.price),
     originalPrice: p.originalPrice ? parseFloat(p.originalPrice) : null,
     rating: parseFloat(p.rating ?? "4.5"),
+    // Expose both: `image` (single) and `images` (array) so frontend works either way
     image: p.image ?? null,
+    images: p.image ? [p.image] : [],
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
 }
 
+function extractImage(body: any): string | null {
+  // Admin sends `images: [url1, url2, url3]` — save the first non-empty one as `image`
+  if (Array.isArray(body.images)) {
+    const first = body.images.find((u: any) => typeof u === "string" && u.trim() !== "");
+    if (first) return first;
+  }
+  // Fallback: if someone sends `image` directly
+  if (typeof body.image === "string" && body.image.trim() !== "") return body.image;
+  return null;
+}
+
 router.get("/products", async (_req: Request, res: Response) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Cache-Control", "no-store");
   try {
     const products = await db.select().from(productsTable).orderBy(productsTable.id);
     res.json(products.map(toJson));
@@ -34,7 +47,11 @@ router.post("/products", async (req: Request, res: Response) => {
     price: req.body.price?.toString(),
     originalPrice: req.body.originalPrice?.toString() ?? null,
     rating: req.body.rating?.toString(),
+    image: extractImage(req.body),
   };
+  // Remove `images` array before passing to schema (schema only knows `image`)
+  delete body.images;
+
   const parsed = insertProductSchema.safeParse(body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid product data", details: parsed.error.flatten() });
@@ -63,7 +80,10 @@ router.put("/products/:id", async (req: Request, res: Response) => {
     price: req.body.price?.toString(),
     originalPrice: req.body.originalPrice?.toString() ?? null,
     rating: req.body.rating?.toString(),
+    image: extractImage(req.body),
   };
+  delete body.images;
+
   const parsed = insertProductSchema.safeParse(body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid product data", details: parsed.error.flatten() });
