@@ -61,4 +61,40 @@ router.get("/orders/by-email/:email", async (req: Request, res: Response) => {
   }
 });
 
+const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "cartiva2024";
+const ALLOWED_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+
+// PATCH /api/orders/:id/status — update an order's status (e.g. mark as delivered)
+router.patch("/orders/:id/status", async (req: Request, res: Response) => {
+  const { status, password } = req.body as { status?: string; password?: string };
+  if (password !== ADMIN_PASSWORD) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  if (!status || !ALLOWED_STATUSES.includes(status)) {
+    res.status(400).json({ error: `Status must be one of: ${ALLOWED_STATUSES.join(", ")}` });
+    return;
+  }
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) {
+    res.status(400).json({ error: "Invalid order id" });
+    return;
+  }
+  try {
+    const [order] = await db
+      .update(ordersTable)
+      .set({ status })
+      .where(eq(ordersTable.id, id))
+      .returning();
+    if (!order) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+    res.json(order);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update order status" });
+  }
+});
+
 export default router;
