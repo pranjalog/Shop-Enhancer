@@ -104,7 +104,7 @@ router.get("/shopify/callback", async (req: Request, res: Response) => {
     await storeToken(shop, data.access_token, data.scope);
 
     // Redirect to admin panel with success
-    res.redirect("/admin?shopify=connected");
+    res.redirect("https://cartiva.click/admin?shopify=connected");
   } catch (err) {
     res.status(500).json({ error: "OAuth callback error" });
   }
