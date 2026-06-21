@@ -67,16 +67,10 @@ export default function HeroSection() {
           >
             <div className="flex">
               {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  size={16}
-                  className="fill-yellow-400 text-yellow-400"
-                />
+                <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
               ))}
             </div>
-            <span className="text-sm text-gray-500">
-              4.8 &bull; 2,847 reviews
-            </span>
+            <span className="text-sm text-gray-500">4.8 &bull; 2,847 reviews</span>
           </motion.div>
 
           {/* Price */}
@@ -105,10 +99,7 @@ export default function HeroSection() {
               className="group inline-flex items-center gap-2 px-8 py-4 bg-black text-white text-sm font-semibold uppercase tracking-widest hover:bg-gray-800 transition-all"
             >
               Shop Now
-              <ArrowRight
-                size={16}
-                className="group-hover:translate-x-1 transition-transform"
-              />
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link
               to="/products"
@@ -127,18 +118,27 @@ export default function HeroSection() {
           className="relative hidden lg:block"
         >
           <div className="relative aspect-square">
-            <div className="absolute inset-0 bg-gradient-to-br from-rose-200/60 to-purple-200/60 rounded-[3rem] flex items-center justify-center">
+            {/* Background gradient card */}
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-200/60 to-purple-200/60 rounded-[3rem] overflow-hidden flex items-center justify-center">
+
+              {/* Product photo background — slightly zoomed and faded for depth */}
+              <div
+                className="absolute inset-0 bg-center bg-cover opacity-30 scale-110"
+                style={{ backgroundImage: "url('/hero-product.png')" }}
+              />
+
+              {/* Floating product image with animation */}
               <motion.div
                 animate={{ y: [-8, 8, -8] }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="text-center"
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                className="relative text-center z-10"
               >
-                <div className="w-48 h-48 bg-white/60 backdrop-blur-sm rounded-full mx-auto flex items-center justify-center shadow-2xl">
-                  <span className="text-6xl">🌸</span>
+                <div className="w-56 h-56 mx-auto flex items-center justify-center drop-shadow-2xl">
+                  <img
+                    src="/hero-product.png"
+                    alt="CartivaCare Period Cramp Massager"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
                 <p className="mt-6 text-sm font-semibold text-gray-700 uppercase tracking-widest">
                   CartivaCare Massager
@@ -146,30 +146,19 @@ export default function HeroSection() {
               </motion.div>
             </div>
 
+            {/* Floating feature badges — unchanged */}
             <motion.div
               animate={{ y: [-5, 5, -5] }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.5,
-              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
               className="absolute -left-4 top-1/4 bg-white rounded-2xl shadow-lg px-4 py-3"
             >
-              <p className="text-xs font-bold text-gray-900">
-                4 Vibration + Heating
-              </p>
+              <p className="text-xs font-bold text-gray-900">4 Vibration + Heating</p>
               <p className="text-[10px] text-gray-500">5 modes total</p>
             </motion.div>
 
             <motion.div
               animate={{ y: [5, -5, 5] }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 1,
-              }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
               className="absolute -right-4 top-1/3 bg-white rounded-2xl shadow-lg px-4 py-3"
             >
               <p className="text-xs font-bold text-gray-900">USB-C Charging</p>
@@ -178,17 +167,10 @@ export default function HeroSection() {
 
             <motion.div
               animate={{ y: [-3, 7, -3] }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 1.5,
-              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
               className="absolute left-1/4 -bottom-2 bg-white rounded-2xl shadow-lg px-4 py-3"
             >
-              <p className="text-xs font-bold text-gray-900">
-                Medical-Grade Silicone
-              </p>
+              <p className="text-xs font-bold text-gray-900">Medical-Grade Silicone</p>
               <p className="text-[10px] text-gray-500">Safe & skin-friendly</p>
             </motion.div>
           </div>
