@@ -19,6 +19,7 @@ function toJson(p: DbProduct) {
 }
 
 router.get("/products", async (_req: Request, res: Response) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   try {
     const products = await db.select().from(productsTable).orderBy(productsTable.id);
     res.json(products.map(toJson));
