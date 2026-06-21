@@ -117,10 +117,17 @@ router.get("/shopify/callback", async (req: Request, res: Response) => {
 router.get("/shopify/debug", async (req: Request, res: Response) => {
   try {
     const allRows = await db.execute(sql`SELECT shop, scope, updated_at FROM shopify_tokens`);
+    const filteredRows = await db.execute(
+      sql`SELECT shop, access_token FROM shopify_tokens WHERE shop = ${SHOP_DOMAIN} LIMIT 1`
+    );
+    const filtered = (filteredRows as any[])[0];
     res.json({
       SHOP_DOMAIN_env_value: SHOP_DOMAIN,
       SHOP_DOMAIN_char_count: SHOP_DOMAIN.length,
       rows_in_database: allRows,
+      filtered_query_result: filteredRows,
+      filtered_query_found_a_row: !!filtered,
+      filtered_query_has_token: !!filtered?.access_token,
     });
   } catch (err) {
     res.json({ error: String(err) });
@@ -129,6 +136,7 @@ router.get("/shopify/debug", async (req: Request, res: Response) => {
 
 // GET /api/shopify/status — check connection status
 router.get("/shopify/status", async (req: Request, res: Response) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   const shop = SHOP_DOMAIN;
   if (!shop) {
     res.json({ connected: false, reason: "SHOPIFY_SHOP_DOMAIN not set" });
