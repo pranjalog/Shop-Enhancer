@@ -7,28 +7,28 @@ import type { DbProduct } from "@workspace/db";
 const router: IRouter = Router();
 
 function toJson(p: DbProduct) {
+  // images array: prefer the DB images[] column, fallback to [image] for old rows
+  const images = (p.images && p.images.length > 0)
+    ? p.images
+    : (p.image ? [p.image] : []);
   return {
     ...p,
     price: parseFloat(p.price),
     originalPrice: p.originalPrice ? parseFloat(p.originalPrice) : null,
     rating: parseFloat(p.rating ?? "4.5"),
-    // Expose both: `image` (single) and `images` (array) so frontend works either way
-    image: p.image ?? null,
-    images: p.image ? [p.image] : [],
+    image: images[0] ?? null,
+    images,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   };
 }
 
-function extractImage(body: any): string | null {
-  // Admin sends `images: [url1, url2, url3]` — save the first non-empty one as `image`
+function extractImages(body: any): string[] {
   if (Array.isArray(body.images)) {
-    const first = body.images.find((u: any) => typeof u === "string" && u.trim() !== "");
-    if (first) return first;
+    return body.images.filter((u: any) => typeof u === "string" && u.trim() !== "");
   }
-  // Fallback: if someone sends `image` directly
-  if (typeof body.image === "string" && body.image.trim() !== "") return body.image;
-  return null;
+  if (typeof body.image === "string" && body.image.trim() !== "") return [body.image];
+  return [];
 }
 
 router.get("/products", async (_req: Request, res: Response) => {
@@ -42,15 +42,15 @@ router.get("/products", async (_req: Request, res: Response) => {
 });
 
 router.post("/products", async (req: Request, res: Response) => {
+  const imgs = extractImages(req.body);
   const body = {
     ...req.body,
     price: req.body.price?.toString(),
     originalPrice: req.body.originalPrice?.toString() ?? null,
     rating: req.body.rating?.toString(),
-    image: extractImage(req.body),
+    image: imgs[0] ?? null,
+    images: imgs,
   };
-  // Remove `images` array before passing to schema (schema only knows `image`)
-  delete body.images;
 
   const parsed = insertProductSchema.safeParse(body);
   if (!parsed.success) {
@@ -71,18 +71,17 @@ router.post("/products", async (req: Request, res: Response) => {
 
 router.put("/products/:id", async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid product ID" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid product ID" }); return; }
+
+  const imgs = extractImages(req.body);
   const body = {
     ...req.body,
     price: req.body.price?.toString(),
     originalPrice: req.body.originalPrice?.toString() ?? null,
     rating: req.body.rating?.toString(),
-    image: extractImage(req.body),
+    image: imgs[0] ?? null,
+    images: imgs,
   };
-  delete body.images;
 
   const parsed = insertProductSchema.safeParse(body);
   if (!parsed.success) {
@@ -95,10 +94,7 @@ router.put("/products/:id", async (req: Request, res: Response) => {
       .set({ ...parsed.data, updatedAt: new Date() })
       .where(eq(productsTable.id, id))
       .returning();
-    if (!product) {
-      res.status(404).json({ error: "Product not found" });
-      return;
-    }
+    if (!product) { res.status(404).json({ error: "Product not found" }); return; }
     res.json(toJson(product));
   } catch {
     res.status(500).json({ error: "Failed to update product" });
@@ -107,10 +103,7 @@ router.put("/products/:id", async (req: Request, res: Response) => {
 
 router.delete("/products/:id", async (req: Request, res: Response) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid product ID" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid product ID" }); return; }
   try {
     await db.delete(productsTable).where(eq(productsTable.id, id));
     res.status(204).send();
