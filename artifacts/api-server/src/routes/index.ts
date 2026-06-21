@@ -4,7 +4,7 @@ import paymentsRouter from "./payments";
 import storageRouter from "./storage";
 import productsRouter from "./products";
 import adminRouter from "./admin";
-import shopifyRouter from "./shopify";
+import ordersRouter from "./orders";
 
 const router: IRouter = Router();
 
@@ -13,6 +13,6 @@ router.use(paymentsRouter);
 router.use(storageRouter);
 router.use(productsRouter);
 router.use(adminRouter);
-router.use(shopifyRouter);
+router.use(ordersRouter);
 
 export default router;
