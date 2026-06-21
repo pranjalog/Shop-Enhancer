@@ -29,12 +29,15 @@ function verifyHmac(query: Record<string, string>): boolean {
 
 async function getStoredToken(shop: string): Promise<string | null> {
   try {
+    console.log("[shopify] looking up token for shop:", JSON.stringify(shop));
     const rows = await db.execute(
-      sql`SELECT access_token FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
+      sql`SELECT access_token, shop FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
     );
+    console.log("[shopify] query returned rows:", JSON.stringify(rows));
     const first = (rows as any[])[0];
     return first?.access_token ?? null;
-  } catch {
+  } catch (err) {
+    console.log("[shopify] getStoredToken error:", err);
     return null;
   }
 }
