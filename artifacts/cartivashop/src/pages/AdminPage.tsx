@@ -126,6 +126,14 @@ type ShopifyOrder = {
   line_items: { title: string; quantity: number; price: string }[];
   shipping_address?: { address1: string; city: string; province: string; zip: string };
 };
+type LocalOrderItem = { id?: string; name: string; price: string | number; quantity: number; color?: string };
+type LocalOrder = {
+  id: number; orderNumber: string; customerName: string; customerEmail: string;
+  customerPhone: string; address: string; city: string; state: string | null; pincode: string;
+  items: LocalOrderItem[]; total: string; paymentMethod: string; paymentId: string | null;
+  status: string; createdAt: string;
+};
+const ORDER_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"] as const;
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("admin_authed") === "1");
@@ -133,12 +141,16 @@ export default function AdminPage() {
   const [pwError, setPwError] = useState("");
   const [pwLoading, setPwLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"products" | "shopify">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "shopify" | "orders">("products");
 
   const [shopifyStatus, setShopifyStatus] = useState<ShopifyStatus | null>(null);
   const [shopifyOrders, setShopifyOrders] = useState<ShopifyOrder[]>([]);
   const [shopifyOrdersLoading, setShopifyOrdersLoading] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
+
+  const [localOrders, setLocalOrders] = useState<LocalOrder[]>([]);
+  const [localOrdersLoading, setLocalOrdersLoading] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
 
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -228,6 +240,39 @@ export default function AdminPage() {
   useEffect(() => {
     if (authed) { loadProducts(); loadShopifyStatus(); }
   }, [authed]);
+
+  async function loadLocalOrders() {
+    setLocalOrdersLoading(true);
+    try {
+      const res = await fetch("/api/orders");
+      const data = await res.json();
+      setLocalOrders(Array.isArray(data) ? [...data].reverse() : []);
+    } catch { flash("err", "Failed to load orders."); }
+    finally { setLocalOrdersLoading(false); }
+  }
+
+  async function updateOrderStatus(id: number, status: string) {
+    setUpdatingOrderId(id);
+    try {
+      const res = await fetch(`/api/orders/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, password: adminPw.current }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLocalOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: data.status } : o)));
+        flash("ok", `Order marked as ${status}.`);
+      } else {
+        flash("err", data.error ?? "Failed to update order.");
+      }
+    } catch { flash("err", "Network error updating order."); }
+    finally { setUpdatingOrderId(null); }
+  }
+
+  useEffect(() => {
+    if (activeTab === "orders" && localOrders.length === 0 && !localOrdersLoading) loadLocalOrders();
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === "shopify" && shopifyStatus?.connected && shopifyOrders.length === 0) {
@@ -359,6 +404,15 @@ export default function AdminPage() {
             className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === "products" ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black"}`}>
             <Package size={15} /> Products &amp; Categories
           </button>
+          <button onClick={() => setActiveTab("orders")}
+            className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === "orders" ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black"}`}>
+            <Package size={15} /> Orders
+            {localOrders.filter((o) => o.status === "pending").length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+                {localOrders.filter((o) => o.status === "pending").length} pending
+              </span>
+            )}
+          </button>
           <button onClick={() => setActiveTab("shopify")}
             className={`flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 transition-colors ${activeTab === "shopify" ? "border-black text-black" : "border-transparent text-gray-500 hover:text-black"}`}>
             <ShoppingBag size={15} /> Shopify
@@ -487,6 +541,84 @@ export default function AdminPage() {
                     </table>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ───── ORDERS TAB ───── */}
+        {activeTab === "orders" && (
+          <div className="bg-white border border-gray-200">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-lg font-black uppercase tracking-tight">Website Orders</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-400">{localOrders.length} orders</span>
+                <button onClick={loadLocalOrders} className="text-gray-400 hover:text-black transition-colors" title="Refresh">
+                  <RefreshCw size={14} className={localOrdersLoading ? "animate-spin" : ""} />
+                </button>
+              </div>
+            </div>
+            {localOrdersLoading ? (
+              <div className="p-12 text-center text-gray-400">
+                <Loader2 size={24} className="animate-spin mx-auto mb-3" /><p className="text-sm">Loading orders...</p>
+              </div>
+            ) : localOrders.length === 0 ? (
+              <div className="p-12 text-center text-gray-400">
+                <Package size={32} className="mx-auto mb-3 opacity-30" /><p className="text-sm">No orders yet.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      {["Order", "Customer", "Items", "Total", "Payment", "Status", "Date"].map((h) => (
+                        <th key={h} className="text-left text-xs font-semibold uppercase tracking-wider text-gray-500 px-4 py-3">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {localOrders.map((o) => (
+                      <tr key={o.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-mono text-xs font-bold">{o.orderNumber}</td>
+                        <td className="px-4 py-3 text-xs">
+                          <div>{o.customerName}</div>
+                          <div className="text-gray-400">{o.customerEmail}</div>
+                          <div className="text-gray-400">{o.customerPhone}</div>
+                          <div className="text-gray-400">{o.city}{o.state ? `, ${o.state}` : ""} {o.pincode}</div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600">
+                          {(o.items ?? []).map((it, idx) => (
+                            <div key={idx}>{it.quantity}× {it.name}{it.color ? ` (${it.color})` : ""}</div>
+                          ))}
+                        </td>
+                        <td className="px-4 py-3 font-bold">₹{parseFloat(o.total).toLocaleString("en-IN")}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium uppercase ${o.paymentMethod === "cod" ? "bg-gray-100 text-gray-600" : "bg-green-100 text-green-700"}`}>
+                            {o.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={o.status}
+                            disabled={updatingOrderId === o.id}
+                            onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                            className={`text-xs font-medium capitalize px-2 py-1 rounded border focus:outline-none disabled:opacity-50 ${
+                              o.status === "delivered" ? "bg-green-50 text-green-700 border-green-200" :
+                              o.status === "shipped" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                              o.status === "cancelled" ? "bg-red-50 text-red-700 border-red-200" :
+                              o.status === "confirmed" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                              "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                            {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-400">
+                          {new Date(o.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
