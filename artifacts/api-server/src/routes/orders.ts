@@ -18,22 +18,17 @@ router.post("/orders", async (req: Request, res: Response) => {
   }
   try {
     const [order] = await db.insert(ordersTable).values(parsed.data).returning();
-    res.status(201).json(order);
 
-    // Push to Shopify in the background; don't block or fail the checkout if this errors
+    // Push to Shopify for ALL orders (guest and logged-in)
     pushOrderToShopify({
-      orderNumber: order.orderNumber,
-      customerName: order.customerName,
-      customerEmail: order.customerEmail,
-      customerPhone: order.customerPhone,
-      address: order.address,
-      city: order.city,
-      state: order.state,
-      pincode: order.pincode,
-      items: order.items as any,
-      total: order.total,
-      paymentMethod: order.paymentMethod,
-    }).catch((err) => console.log("[shopify] order push threw:", err));
+      customerName: parsed.data.customerName ?? "Guest",
+      customerEmail: parsed.data.customerEmail ?? "",
+      total: parseFloat(parsed.data.total),
+      items: parsed.data.items as Array<{ name: string; quantity: number; price: number }>,
+      address: parsed.data.address ?? undefined,
+    }).catch((err) => console.error("[shopify] push error:", err));
+
+    res.status(201).json(order);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to save order" });
@@ -61,38 +56,18 @@ router.get("/orders/by-email/:email", async (req: Request, res: Response) => {
   }
 });
 
-const ADMIN_PASSWORD = process.env["ADMIN_PASSWORD"] ?? "cartiva2024";
-const ALLOWED_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
-
-// PATCH /api/orders/:id/status — update an order's status (e.g. mark as delivered)
 router.patch("/orders/:id/status", async (req: Request, res: Response) => {
-  const { status, password } = req.body as { status?: string; password?: string };
-  if (password !== ADMIN_PASSWORD) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  if (!status || !ALLOWED_STATUSES.includes(status)) {
-    res.status(400).json({ error: `Status must be one of: ${ALLOWED_STATUSES.join(", ")}` });
-    return;
-  }
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id)) {
-    res.status(400).json({ error: "Invalid order id" });
-    return;
-  }
+  const id = parseInt(req.params.id);
+  const { status } = req.body;
+  if (!status) { res.status(400).json({ error: "Status required" }); return; }
   try {
     const [order] = await db
       .update(ordersTable)
       .set({ status })
       .where(eq(ordersTable.id, id))
       .returning();
-    if (!order) {
-      res.status(404).json({ error: "Order not found" });
-      return;
-    }
     res.json(order);
-  } catch (err) {
-    console.error(err);
+  } catch {
     res.status(500).json({ error: "Failed to update order status" });
   }
 });
