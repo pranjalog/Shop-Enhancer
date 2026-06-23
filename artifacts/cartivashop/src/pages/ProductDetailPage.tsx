@@ -29,6 +29,7 @@ export default function ProductDetailPage() {
   );
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [activeImage, setActiveImage] = useState(0);
 
   const { addItem } = useCart();
   const { isInWishlist, toggleItem: toggleWishlist } = useWishlist();
@@ -64,6 +65,10 @@ export default function ProductDetailPage() {
   const wishlisted = isInWishlist(String(product.id));
   const compared = isInCompare(String(product.id));
 
+  const images = product.images && product.images.length > 0
+    ? product.images
+    : [];
+
   return (
     <main className="min-h-screen pt-24 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,21 +85,47 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20">
-          {/* Image */}
-          <div>
+          {/* Image Gallery */}
+          <div className="flex flex-col gap-4">
+            {/* Main image */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              key={activeImage}
+              initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.3 }}
               className="aspect-square bg-gray-100 rounded-2xl overflow-hidden"
             >
               <ImageWithFallback
-                src={product.images?.[0] ?? ""}
+                src={images[activeImage] ?? ""}
                 alt={product.name}
                 className="w-full h-full"
                 fallbackSize={80}
               />
             </motion.div>
+
+            {/* Thumbnails — only show if more than 1 image */}
+            {images.length > 1 && (
+              <div className="flex gap-3">
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(i)}
+                    className={`w-20 h-20 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${
+                      activeImage === i
+                        ? "border-black"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <ImageWithFallback
+                      src={img}
+                      alt={`${product.name} view ${i + 1}`}
+                      className="w-full h-full"
+                      fallbackSize={20}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Info */}
