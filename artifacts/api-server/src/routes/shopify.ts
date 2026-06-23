@@ -29,12 +29,15 @@ function verifyHmac(query: Record<string, string>): boolean {
 
 async function getStoredToken(shop: string): Promise<string | null> {
   try {
-    const result: any = await db.execute(
-      sql`SELECT access_token FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
+    console.log("[shopify] looking up token for shop:", JSON.stringify(shop));
+    const rows = await db.execute(
+      sql`SELECT access_token, shop FROM shopify_tokens WHERE shop = ${shop} LIMIT 1`
     );
-    const first = result?.rows?.[0];
+    console.log("[shopify] query returned rows:", JSON.stringify(rows));
+    const first = (rows as any[])[0];
     return first?.access_token ?? null;
-  } catch {
+  } catch (err) {
+    console.log("[shopify] getStoredToken error:", err);
     return null;
   }
 }
@@ -48,89 +51,6 @@ async function storeToken(shop: string, accessToken: string, scope: string) {
           scope = EXCLUDED.scope,
           updated_at = now()
   `);
-}
-
-type CartivaOrder = {
-  orderNumber: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  address: string;
-  city: string;
-  state?: string | null;
-  pincode: string;
-  items: Array<{ id?: string; name: string; price: string | number; quantity: number; color?: string }>;
-  total: string | number;
-  paymentMethod: string;
-};
-
-// Creates a matching order inside Shopify when a customer checks out on cartiva.click.
-// Uses custom (title-based) line items so it works even if products aren't synced/matched to Shopify variants.
-export async function pushOrderToShopify(order: CartivaOrder): Promise<boolean> {
-  const shop = SHOP_DOMAIN;
-  const token = await getStoredToken(shop);
-  if (!token) {
-    console.log("[shopify] skipping order push, not connected");
-    return false;
-  }
-
-  const [firstName, ...rest] = order.customerName.trim().split(/\s+/);
-  const lastName = rest.join(" ") || "-";
-
-  const body = {
-    order: {
-      line_items: order.items.map((i) => ({
-        title: i.name,
-        price: String(i.price),
-        quantity: i.quantity,
-        ...(i.color ? { properties: [{ name: "Color", value: i.color }] } : {}),
-      })),
-      email: order.customerEmail,
-      phone: order.customerPhone,
-      customer: {
-        first_name: firstName || order.customerName,
-        last_name: lastName,
-        email: order.customerEmail,
-        phone: order.customerPhone,
-      },
-      shipping_address: {
-        first_name: firstName || order.customerName,
-        last_name: lastName,
-        address1: order.address,
-        city: order.city,
-        province: order.state || undefined,
-        zip: order.pincode,
-        country: "India",
-        phone: order.customerPhone,
-      },
-      financial_status: order.paymentMethod === "cod" ? "pending" : "paid",
-      note: `Cartiva order ${order.orderNumber} (${order.paymentMethod})`,
-      tags: "cartiva-website",
-      send_receipt: false,
-      send_fulfillment_receipt: false,
-    },
-  };
-
-  try {
-    const r = await fetch(`https://${shop}/admin/api/2024-10/orders.json`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": token,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) {
-      const txt = await r.text();
-      console.log("[shopify] order push failed:", r.status, txt);
-      return false;
-    }
-    console.log("[shopify] order pushed successfully:", order.orderNumber);
-    return true;
-  } catch (err) {
-    console.log("[shopify] order push error:", err);
-    return false;
-  }
 }
 
 // GET /api/shopify/install — start OAuth
@@ -193,9 +113,22 @@ router.get("/shopify/callback", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/shopify/debug — temporary debug info (remove after fixing)
+router.get("/shopify/debug", async (req: Request, res: Response) => {
+  try {
+    const allRows = await db.execute(sql`SELECT shop, scope, updated_at FROM shopify_tokens`);
+    res.json({
+      SHOP_DOMAIN_env_value: SHOP_DOMAIN,
+      SHOP_DOMAIN_char_count: SHOP_DOMAIN.length,
+      rows_in_database: allRows,
+    });
+  } catch (err) {
+    res.json({ error: String(err) });
+  }
+});
+
 // GET /api/shopify/status — check connection status
 router.get("/shopify/status", async (req: Request, res: Response) => {
-  res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   const shop = SHOP_DOMAIN;
   if (!shop) {
     res.json({ connected: false, reason: "SHOPIFY_SHOP_DOMAIN not set" });
@@ -344,5 +277,60 @@ router.post("/shopify/sync-products", async (req: Request, res: Response) => {
 
   res.json({ synced: results.filter((r) => r.status === "created").length, total: localProducts.length, results });
 });
+
+
+// Push an order to Shopify
+export async function pushOrderToShopify(order: {
+  customerName: string;
+  customerEmail: string;
+  total: number;
+  items: Array<{ name: string; quantity: number; price: number }>;
+  address?: string;
+}): Promise<void> {
+  const shop = process.env["SHOPIFY_SHOP_DOMAIN"] ?? "";
+  const token = await getStoredToken(shop);
+  if (!token) {
+    console.error("[shopify] pushOrderToShopify: no token found, skipping");
+    return;
+  }
+
+  const lineItems = order.items.map((item) => ({
+    title: item.name,
+    quantity: item.quantity,
+    price: item.price.toFixed(2),
+  }));
+
+  const shopifyOrder = {
+    order: {
+      line_items: lineItems,
+      customer: {
+        first_name: order.customerName.split(" ")[0] ?? order.customerName,
+        last_name: order.customerName.split(" ").slice(1).join(" ") ?? "",
+        email: order.customerEmail,
+      },
+      financial_status: "pending",
+      tags: "cartiva-website",
+    },
+  };
+
+  const res = await fetch(
+    `https://${shop}/admin/api/2024-10/orders.json`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": token,
+      },
+      body: JSON.stringify(shopifyOrder),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("[shopify] pushOrderToShopify failed:", err);
+  } else {
+    console.log("[shopify] order pushed to Shopify successfully");
+  }
+}
 
 export default router;
