@@ -89,7 +89,7 @@ export default function ProductDetailPage() {
               className="aspect-square bg-gray-100 rounded-2xl overflow-hidden"
             >
               <ImageWithFallback
-                src={product.image ?? ""}
+                src={product.images?.[0] ?? ""}
                 alt={product.name}
                 className="w-full h-full"
                 fallbackSize={80}
