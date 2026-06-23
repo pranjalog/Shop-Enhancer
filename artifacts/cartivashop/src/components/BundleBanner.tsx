@@ -27,10 +27,10 @@ export default function BundleBanner() {
             </p>
 
             <div className="flex items-baseline gap-3 mt-8">
-              <span className="text-5xl font-black">₹699</span>
-              <span className="text-2xl text-gray-500 line-through">₹1,799</span>
+              <span className="text-5xl font-black">₹1,499</span>
+              <span className="text-2xl text-gray-500 line-through">₹2,499</span>
               <span className="px-3 py-1 bg-rose-500 text-white text-xs font-bold rounded">
-                SAVE 61%
+                SAVE 40%
               </span>
             </div>
 
