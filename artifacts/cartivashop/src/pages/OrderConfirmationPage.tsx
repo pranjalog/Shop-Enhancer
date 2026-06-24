@@ -1,10 +1,28 @@
+import { useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle, Package, ArrowRight } from "lucide-react";
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
 export default function OrderConfirmationPage() {
   const [searchParams] = useSearchParams();
   const paymentId = searchParams.get("payment_id");
+  const total = searchParams.get("total");
+
+  useEffect(() => {
+    // Fire Meta Pixel Purchase event
+    if (typeof window.fbq === "function") {
+      window.fbq("track", "Purchase", {
+        value: total ? parseFloat(total) : 0,
+        currency: "INR",
+      });
+    }
+  }, [total]);
 
   return (
     <main className="min-h-screen pt-24 pb-24 flex items-center justify-center">
