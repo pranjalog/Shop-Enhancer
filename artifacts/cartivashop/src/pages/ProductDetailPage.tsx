@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -18,6 +18,18 @@ import { useCompare } from "@/context/CompareContext";
 import ProductCard from "@/components/ProductCard";
 import ImageWithFallback from "@/components/ImageWithFallback";
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
+function firePixel(event: string, params?: Record<string, unknown>) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("track", event, params);
+  }
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -34,6 +46,20 @@ export default function ProductDetailPage() {
   const { addItem } = useCart();
   const { isInWishlist, toggleItem: toggleWishlist } = useWishlist();
   const { isInCompare, toggleItem: toggleCompare } = useCompare();
+
+  // 🔵 PIXEL: ViewContent
+  useEffect(() => {
+    if (product) {
+      firePixel("ViewContent", {
+        content_ids: [String(product.id)],
+        content_name: product.name,
+        content_category: product.category,
+        content_type: "product",
+        value: product.price,
+        currency: "INR",
+      });
+    }
+  }, [product?.id]);
 
   if (!product) {
     return (
@@ -52,10 +78,20 @@ export default function ProductDetailPage() {
     );
   }
 
+  // 🔵 PIXEL: AddToCart
   const handleAddToCart = () => {
     addItem(product, quantity, selectedColor);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+    firePixel("AddToCart", {
+      content_ids: [String(product.id)],
+      content_name: product.name,
+      content_category: product.category,
+      content_type: "product",
+      value: product.price * quantity,
+      currency: "INR",
+      num_items: quantity,
+    });
   };
 
   const related = products
@@ -87,7 +123,6 @@ export default function ProductDetailPage() {
         <div className="grid lg:grid-cols-2 gap-12 xl:gap-20">
           {/* Image Gallery */}
           <div className="flex flex-col gap-4">
-            {/* Main image */}
             <motion.div
               key={activeImage}
               initial={{ opacity: 0, scale: 0.97 }}
@@ -103,7 +138,6 @@ export default function ProductDetailPage() {
               />
             </motion.div>
 
-            {/* Thumbnails — only show if more than 1 image */}
             {images.length > 1 && (
               <div className="flex gap-3">
                 {images.map((img, i) => (
