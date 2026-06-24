@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, CreditCard, Truck, Shield, Banknote, Check } from "lucide-react";
@@ -13,6 +13,13 @@ declare global {
         on(event: string, cb: () => void): void;
       };
     };
+    fbq?: (...args: any[]) => void;
+  }
+}
+
+function firePixel(event: string, params?: Record<string, unknown>) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq("track", event, params);
   }
 }
 
@@ -38,8 +45,36 @@ export default function CheckoutPage() {
   const shipping = totalPrice >= 500 ? 0 : 79;
   const total = totalPrice + shipping;
 
+  // 🔵 PIXEL: InitiateCheckout
+  useEffect(() => {
+    if (items.length > 0) {
+      firePixel("InitiateCheckout", {
+        content_ids: items.map((i) => String(i.product.id)),
+        contents: items.map((i) => ({
+          id: String(i.product.id),
+          quantity: i.quantity,
+          item_price: i.product.price,
+        })),
+        num_items: items.reduce((sum, i) => sum + i.quantity, 0),
+        value: total,
+        currency: "INR",
+      });
+    }
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  // 🔵 PIXEL: AddPaymentInfo
+  const handlePaymentMethodChange = (method: PaymentMethod) => {
+    setPaymentMethod(method);
+    firePixel("AddPaymentInfo", {
+      content_ids: items.map((i) => String(i.product.id)),
+      value: total,
+      currency: "INR",
+      payment_type: method === "online" ? "Razorpay" : "Cash on Delivery",
+    });
   };
 
   const validateForm = () => {
@@ -81,7 +116,8 @@ export default function CheckoutPage() {
         }),
       });
       clearCart();
-      navigate("/order-confirmation?method=cod&order=" + orderNumber);
+      // ✅ total passed in URL so Purchase event gets real value
+      navigate("/order-confirmation?method=cod&order=" + orderNumber + "&total=" + total);
     } catch {
       setError("Failed to place order. Please try again.");
     } finally {
@@ -146,7 +182,8 @@ export default function CheckoutPage() {
               }),
             });
             clearCart();
-            navigate("/order-confirmation?payment_id=" + response.razorpay_payment_id + "&order=" + orderNumber);
+            // ✅ total passed in URL so Purchase event gets real value
+            navigate("/order-confirmation?payment_id=" + response.razorpay_payment_id + "&order=" + orderNumber + "&total=" + total);
           },
           theme: { color: "#000000" },
         });
@@ -251,7 +288,7 @@ export default function CheckoutPage() {
                 ).map(({ id, label, sub, icon: Icon }) => (
                   <button
                     key={id}
-                    onClick={() => setPaymentMethod(id)}
+                    onClick={() => handlePaymentMethodChange(id)}
                     className={`flex items-start gap-3 p-4 border-2 text-left transition-all ${
                       paymentMethod === id
                         ? "border-black bg-black text-white"
