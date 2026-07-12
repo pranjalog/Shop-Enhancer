@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 const CONTACT_INFO = {
   address: "149, New Anaj Mandi, Sirsa, Haryana, India – 125055",
-  phone: "+91 98340 23405",
+  phone: "+91 8360197434",
   email: "choudharynanshu@gmail.com",
   mapQuery: "149+New+Anaj+Mandi+Sirsa+Haryana+125055+India",
 };
