@@ -19,13 +19,17 @@ router.post("/orders", async (req: Request, res: Response) => {
   try {
     const [order] = await db.insert(ordersTable).values(parsed.data).returning();
 
-    // Push to Shopify for ALL orders (guest and logged-in)
     pushOrderToShopify({
       customerName: parsed.data.customerName ?? "Guest",
       customerEmail: parsed.data.customerEmail ?? "",
+      customerPhone: parsed.data.customerPhone ?? "",
       total: parseFloat(parsed.data.total),
       items: parsed.data.items as Array<{ name: string; quantity: number; price: number }>,
-      address: parsed.data.address ?? undefined,
+      address: parsed.data.address ?? "",
+      city: parsed.data.city ?? "",
+      state: parsed.data.state ?? "",
+      pincode: parsed.data.pincode ?? "",
+      paymentMethod: parsed.data.paymentMethod ?? "cod",
     }).catch((err) => console.error("[shopify] push error:", err));
 
     res.status(201).json(order);
