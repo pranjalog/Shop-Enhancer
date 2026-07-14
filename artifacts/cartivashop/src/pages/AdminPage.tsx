@@ -584,6 +584,7 @@ export default function AdminPage() {
                           <div>{o.customerName}</div>
                           <div className="text-gray-400">{o.customerEmail}</div>
                           <div className="text-gray-400">{o.customerPhone}</div>
+                          <div className="text-gray-400">{o.address}</div>
                           <div className="text-gray-400">{o.city}{o.state ? `, ${o.state}` : ""} {o.pincode}</div>
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-600">
