@@ -1,4 +1,15 @@
 {
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://connect.facebook.net https://www.facebook.com https://checkout.razorpay.com https://*.razorpay.com https://fonts.googleapis.com; img-src 'self' data: blob: https://www.facebook.com https://*.fbcdn.net https://cartiva-storage.2abc9c1dec7922684c059b42c83ebe93.r2.cloudflarestorage.com https://*.razorpay.com; frame-src https://*.razorpay.com https://www.facebook.com https://*.facebook.com; connect-src 'self' https://*.facebook.com https://*.razorpay.com https://workspaceapi-server-production-826f.up.railway.app https://cartiva-storage.2abc9c1dec7922684c059b42c83ebe93.r2.cloudflarestorage.com;"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
