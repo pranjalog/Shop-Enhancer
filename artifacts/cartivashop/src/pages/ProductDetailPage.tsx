@@ -222,6 +222,20 @@ export default function ProductDetailPage() {
               </p>
             </div>
 
+            {/* Live viewers */}
+            <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+             <span className="relative flex h-2 w-2">
+             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+             </span>
+             <span><strong>{Math.floor(Math.random() * 16) + 8} people</strong> are viewing this right now</span>
+            </div>
+
+            {/* Low stock */}
+            <div className="mt-2 flex items-center gap-2 text-sm text-red-600 font-semibold">
+              🔥 Only <strong>3 left</strong> in stock — order soon!
+            </div>
+
             {/* Trust Badges */}
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="flex flex-col items-center gap-1 p-3 bg-green-50 rounded-lg text-center">
