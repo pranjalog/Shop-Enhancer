@@ -30,15 +30,17 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     >
       {/* Image */}
       <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
-        <ImageWithFallback
-          src={product.images[0]}
-          alt={product.name}
-          className="w-full h-full group-hover:scale-105 transition-transform duration-500"
-          fallbackSize={48}
-        />
+        <Link to={`/products/${product.id}`} className="block w-full h-full">
+          <ImageWithFallback
+            src={product.images[0]}
+            alt={product.name}
+            className="w-full h-full group-hover:scale-105 transition-transform duration-500"
+            fallbackSize={48}
+          />
+        </Link>
 
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 pointer-events-none">
           {product.originalPrice && (
             <span className="bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
               Sale
