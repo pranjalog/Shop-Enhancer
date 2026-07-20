@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import CartTimer from "@/components/CartTimer";
 import { motion } from "framer-motion";
 import { ShoppingBag, Minus, Plus, X, ArrowRight } from "lucide-react";
 import { useCart } from "@/context/CartContext";
