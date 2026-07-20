@@ -4,6 +4,7 @@ import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+import LivePurchasePopup from "@/components/LivePurchasePopup";
 
 import HomePage from "@/pages/HomePage";
 import ProductsPage from "@/pages/ProductsPage";
@@ -49,6 +50,7 @@ export default function App() {
               <>
                 <Navbar />
                 <CartDrawer />
+                <LivePurchasePopup />
                 <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/products" element={<ProductsPage />} />
