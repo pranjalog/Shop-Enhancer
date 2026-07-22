@@ -1,0 +1,12 @@
+
+node_modules
+**/node_modules
+**/dist
+.git
+.replit
+.replitignore
+*.md
+attached_assets
+.env
+.env.*
+!.env.example
